@@ -35,10 +35,26 @@ export default function AuthGate({ children }: Props) {
       if (!url.startsWith('/api/incidents') && !url.startsWith('/api/messages')) {
         return originalFetch(input, init);
       }
-      const tokenResult: any = await authClient.token();
-      const token = tokenResult?.data?.token;
-      if (!token || tokenResult?.error) {
-        return new Response(JSON.stringify({ error: 'Please sign in again to continue.' }), {
+      // The Neon Auth SDK exposes JWT retrieval as getJWTToken() in some
+      // versions and as token() in others. Support both return shapes.
+      let token: string | undefined;
+      const client: any = authClient;
+      try {
+        if (typeof client.getJWTToken === 'function') {
+          const jwtResult = await client.getJWTToken();
+          token = typeof jwtResult === 'string'
+            ? jwtResult
+            : jwtResult?.data?.token ?? jwtResult?.token;
+        }
+        if (!token && typeof client.token === 'function') {
+          const tokenResult = await client.token();
+          token = tokenResult?.data?.token ?? tokenResult?.token;
+        }
+      } catch {
+        token = undefined;
+      }
+      if (!token) {
+        return new Response(JSON.stringify({ error: 'Your sign-in session could not provide an access token. Please sign out and sign in again.' }), {
           status: 401, headers: { 'Content-Type': 'application/json' },
         });
       }
