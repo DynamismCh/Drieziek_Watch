@@ -122,7 +122,7 @@ export default function AuthGate({ children }: Props) {
   );
 }
 
-const styles: Record<string, React.CSSProperties> = {
+const styles: Record<string, import('react').CSSProperties> = {
   page: { minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#f5f7fa', padding: 24, fontFamily: "'DM Sans', sans-serif", color: '#1b2635' },
   card: { width: '100%', maxWidth: 430, background: '#fff', border: '1px solid #e6ebf0', borderRadius: 16, padding: 30, boxShadow: '0 14px 45px #142c4012' },
   mark: { width: 48, height: 48, display: 'grid', placeItems: 'center', borderRadius: 14, background: '#f5b64e', color: '#142c40', fontWeight: 900, fontSize: 17 },
