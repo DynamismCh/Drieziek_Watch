@@ -1,4 +1,5 @@
 import { neon } from '@neondatabase/serverless';
+import { authenticateRequest, isAdmin } from '../lib/auth';
 
 const sql = () => {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not configured');
@@ -14,6 +15,8 @@ export default async function handler(req: any, res: any) {
   if (req.method === 'OPTIONS') return res.status(204).end();
 
   try {
+    const user = await authenticateRequest(req);
+    if (!user) return sendError(res, 401, 'Please sign in to use Drieziek Watch.');
     const db = sql();
 
     if (req.method === 'GET') {
@@ -45,7 +48,7 @@ export default async function handler(req: any, res: any) {
       const urgency = body.urgency === 'High' ? 'High' : 'Normal';
       const description = String(body.description || '').trim();
       const location = String(body.location || 'Location not provided').trim();
-      const reporter = String(body.reporter || 'Community member').trim().slice(0, 80) || 'Community member';
+      const reporter = user.email || 'Community member';
 
       if (title.length < 3 || title.length > 160) return sendError(res, 400, 'Title must be 3–160 characters.');
       if (!description || description.length > 4000) return sendError(res, 400, 'Description is required and must be under 4,000 characters.');
@@ -66,6 +69,7 @@ export default async function handler(req: any, res: any) {
     }
 
     if (req.method === 'PATCH') {
+      if (!isAdmin(user)) return sendError(res, 403, 'Only an authorised Drieziek Watch administrator can change incident status.');
       const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
       const id = Number(body.id);
       const status = body.status;
