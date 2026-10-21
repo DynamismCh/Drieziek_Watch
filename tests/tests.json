@@ -1,0 +1,83 @@
+[
+  {
+    "name": "Create a community incident alert",
+    "sanity": true,
+    "viewport": "desktop",
+    "covers": [
+      "incident creation",
+      "required fields",
+      "feed update",
+      "local persistence"
+    ],
+    "description": "Verifies a valid incident report is added to the community feed and retained after refresh.",
+    "steps": [
+      "Open Report incident",
+      "Enter title 'Suspicious activity near the park', choose Suspicious activity, add a description, and submit",
+      "Verify the new incident appears at the top of the feed",
+      "Refresh the page"
+    ],
+    "expected": "The new incident appears in the feed with its category and description after refresh."
+  },
+  {
+    "name": "Attach a photo and location to a report",
+    "viewport": "desktop",
+    "covers": [
+      "photo attachment preview",
+      "manual incident location",
+      "incident metadata"
+    ],
+    "description": "Verifies a report can include a selected image and a manually entered incident location.",
+    "steps": [
+      "Open Report incident",
+      "Enter a title and description",
+      "Enter 'Drieziek, near the community hall' as the location",
+      "Choose an image file",
+      "Submit the report"
+    ],
+    "expected": "The incident is saved with the entered location and a photo indicator."
+  },
+  {
+    "name": "Filter the feed by incident category",
+    "viewport": "desktop",
+    "covers": ["incident category filter", "feed filtering"],
+    "description": "Verifies category filters show matching incidents and can be reset.",
+    "steps": [
+      "Select the Theft filter",
+      "Verify only theft incidents are shown",
+      "Select All incidents"
+    ],
+    "expected": "The feed shows only matching theft incidents, then returns to the full feed."
+  },
+  {
+    "name": "Reject an incomplete incident report",
+    "viewport": "mobile",
+    "covers": [
+      "required field validation",
+      "mobile report form",
+      "invalid submission guardrail"
+    ],
+    "description": "Verifies required incident details are validated on a mobile-sized viewport.",
+    "steps": [
+      "Open Report incident",
+      "Leave the title and description empty",
+      "Submit the form"
+    ],
+    "expected": "Validation feedback appears and no incomplete incident is added."
+  },
+  {
+    "name": "Post a community message",
+    "viewport": "mobile",
+    "covers": [
+      "community messages",
+      "message creation",
+      "mobile responsive workflow"
+    ],
+    "description": "Verifies users can post a short community update from the mobile layout.",
+    "steps": [
+      "Open Community messages",
+      "Enter 'Please avoid the road by the shop while security checks the area.'",
+      "Submit the message"
+    ],
+    "expected": "The message appears in the community message list."
+  }
+]
