@@ -122,12 +122,8 @@ function relativeTime() {
 }
 
 function App() {
-  const [incidents, setIncidents] = useState<Incident[]>(() =>
-    load('drieziek-incidents', starterIncidents)
-  );
-  const [messages, setMessages] = useState<CommunityMessage[]>(() =>
-    load('drieziek-messages', starterMessages)
-  );
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [messages, setMessages] = useState<CommunityMessage[]>([]);
   const [filter, setFilter] = useState('All incidents');
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'alerts' | 'messages'>('alerts');
@@ -148,11 +144,23 @@ function App() {
   );
 
   useEffect(() => {
-    localStorage.setItem('drieziek-incidents', JSON.stringify(incidents));
-  }, [incidents]);
-  useEffect(() => {
-    localStorage.setItem('drieziek-messages', JSON.stringify(messages));
-  }, [messages]);
+    let cancelled = false;
+    fetch('/api/incidents')
+      .then(async response => {
+        if (!response.ok) throw new Error('Could not load incidents');
+        return response.json();
+      })
+      .then(data => { if (!cancelled) setIncidents(Array.isArray(data) ? data : []); })
+      .catch(() => { if (!cancelled) setNotice('Could not load shared incidents. Please refresh and try again.'); });
+    fetch('/api/messages')
+      .then(async response => {
+        if (!response.ok) throw new Error('Could not load messages');
+        return response.json();
+      })
+      .then(data => { if (!cancelled) setMessages(Array.isArray(data) ? data : []); })
+      .catch(() => { if (!cancelled) setNotice('Could not load community messages. Please refresh and try again.'); });
+    return () => { cancelled = true; };
+  }, []);
 
   const visibleIncidents = useMemo(
     () =>
@@ -208,65 +216,78 @@ function App() {
     reader.readAsDataURL(file);
     setFormError('');
   }
-  function submitIncident(event: React.FormEvent) {
+  async function submitIncident(event: React.FormEvent) {
     event.preventDefault();
     if (!title.trim() || !description.trim()) {
-      setFormError(
-        'Add an incident title and a short description before sending.'
-      );
+      setFormError('Add an incident title and a short description before sending.');
       return;
     }
-    const item: Incident = {
-      id: 'dw-' + Date.now(),
-      title: title.trim(),
-      category,
-      urgency,
-      description: description.trim(),
-      location: location.trim() || 'Location not provided',
-      time: relativeTime(),
-      status: 'Active',
-      reporter: 'You',
-      photo: photo || undefined,
-    };
-    setIncidents(current => [item, ...current]);
-    setSelectedIncident(item);
-    setShowReport(false);
-    setActiveTab('alerts');
-    setFilter('All incidents');
-    setTitle('');
-    setDescription('');
-    setLocation('');
-    setPhoto('');
+    if (photo) {
+      setFormError('Photo uploads are not connected yet. Please remove the photo and submit the report without it for now.');
+      return;
+    }
     setFormError('');
-    setNotice(
-      'Incident saved on this device. In this prototype, it is not sent to other users or emergency services.'
-    );
+    try {
+      const response = await fetch('/api/incidents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title.trim(), category, urgency, description: description.trim(),
+          location: location.trim() || 'Location not provided', reporter: 'Community member',
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Could not save this incident.');
+      const item = result as Incident;
+      setIncidents(current => [item, ...current]);
+      setSelectedIncident(item);
+      setShowReport(false);
+      setActiveTab('alerts');
+      setFilter('All incidents');
+      setTitle('');
+      setDescription('');
+      setLocation('');
+      setPhoto('');
+      setNotice('Incident submitted to the shared community database. This does not contact emergency services.');
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Could not save this incident. Please try again.');
+    }
   }
-  function submitMessage(event: React.FormEvent) {
+  async function submitMessage(event: React.FormEvent) {
     event.preventDefault();
     if (!messageText.trim()) return;
-    setMessages(current => [
-      {
-        id: 'msg-' + Date.now(),
-        text: messageText.trim(),
-        time: relativeTime(),
-        author: 'You',
-        location: messageLocation.trim() || undefined,
-      },
-      ...current,
-    ]);
-    setMessageText('');
-    setMessageLocation('');
-    setNotice(
-      'Message saved on this device. It is not broadcast to other users in this prototype.'
-    );
+    try {
+      const response = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: messageText.trim(), location: messageLocation.trim() || undefined, author: 'Community member' }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Could not post the message.');
+      setMessages(current => [result as CommunityMessage, ...current]);
+      setMessageText('');
+      setMessageLocation('');
+      setNotice('Message shared with the community database.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not post the message. Please try again.');
+    }
   }
-  function updateStatus(item: Incident) {
+  async function updateStatus(item: Incident) {
     const next = item.status === 'Resolved' ? 'Active' : 'Resolved';
-    setIncidents(current =>
-      current.map(row => (row.id === item.id ? { ...row, status: next } : row))
-    );
-    setSelectedIncident({ ...item, status: next });
+    try {
+      const response = await fetch('/api/incidents', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: item.id, status: next }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Could not update incident status.');
+      setIncidents(current => current.map(row => row.id === item.id ? { ...row, status: next } : row));
+      setSelectedIncident({ ...item, status: next });
+      setNotice('Incident status updated for the community.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not update incident status.');
+    }
   }
 
   return (
@@ -411,7 +432,7 @@ function App() {
           </div>
           <div className="top-actions">
             <span className="prototype-badge">
-              <span /> Prototype mode
+              <span /> Database beta
             </span>
             <button
               className="icon-btn notification-btn"
@@ -492,9 +513,7 @@ function App() {
           <div className="notice-bar">
             <AlertOctagon size={18} />
             <p>
-              <strong>Prototype notice:</strong> Reports, photos and messages
-              are saved only in this browser. They are not sent to security
-              teams or other users yet.
+              <strong>Database beta:</strong> Incident reports and community messages are shared through the database. Photo uploads, verified user accounts and responder notifications are not enabled yet.
             </p>
             <button aria-label="Dismiss notice" onClick={() => setNotice('')}>
               <X size={16} />
@@ -522,7 +541,7 @@ function App() {
                     <p>Updates shared by the community</p>
                   </div>
                   <span className="feed-live">
-                    <span className="live-dot" /> Local feed
+                    <span className="live-dot" /> Shared feed
                   </span>
                 </div>
                 <div className="feed-toolbar">
@@ -1006,8 +1025,7 @@ function App() {
             <div className="privacy-note">
               <ShieldCheck size={17} />
               <p>
-                Location and photo are stored locally in this prototype. Public
-                sharing and responder notification are not enabled.
+                Incident details are shared through the community database. Photo storage and responder notifications are not enabled yet.
               </p>
             </div>
             <div className="modal-actions">
