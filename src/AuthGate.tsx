@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { createAuthClient } from '@neondatabase/auth';
+import { BetterAuthReactAdapter } from '@neondatabase/auth/react/adapters';
 
-const authClient = createAuthClient('https://ep-damp-sunset-bah0etdc.neonauth.c-8.eu-central-1.aws.neon.tech/neondb/auth');
+const authClient = createAuthClient('https://ep-damp-sunset-bah0etdc.neonauth.c-8.eu-central-1.aws.neon.tech/neondb/auth', { adapter: BetterAuthReactAdapter() });
 
 type Props = { children: ReactNode };
 
