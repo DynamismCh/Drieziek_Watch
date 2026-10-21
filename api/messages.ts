@@ -1,4 +1,5 @@
 import { neon } from '@neondatabase/serverless';
+import { authenticateRequest } from '../lib/auth';
 
 const sql = () => {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not configured');
@@ -14,6 +15,8 @@ export default async function handler(req: any, res: any) {
   if (req.method === 'OPTIONS') return res.status(204).end();
 
   try {
+    const user = await authenticateRequest(req);
+    if (!user) return sendError(res, 401, 'Please sign in to use Drieziek Watch.');
     const db = sql();
 
     if (req.method === 'GET') {
@@ -32,7 +35,7 @@ export default async function handler(req: any, res: any) {
     if (req.method === 'POST') {
       const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
       const message = String(body.text || '').trim();
-      const author = String(body.author || 'Community member').trim().slice(0, 80) || 'Community member';
+      const author = user.email || 'Community member';
       const location = String(body.location || '').trim().slice(0, 300) || null;
 
       if (!message || message.length > 2000) return sendError(res, 400, 'Message must be between 1 and 2,000 characters.');
