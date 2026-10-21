@@ -111,7 +111,15 @@ export default function AuthGate({ children }: Props) {
     );
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <div style={styles.signOutWrap}>
+        <span style={styles.signedInAs}>{user.email || user.name || 'Signed-in resident'}</span>
+        <button type="button" onClick={() => void signOut()} style={styles.signOut}>Sign out</button>
+      </div>
+      {children}
+    </>
+  );
 }
 
 const styles: Record<string, React.CSSProperties> = {
@@ -131,4 +139,7 @@ const styles: Record<string, React.CSSProperties> = {
   info: { color: '#246c51', fontSize: 12, margin: 0 },
   submit: { padding: 13, border: 0, borderRadius: 8, background: '#c6534e', color: 'white', fontWeight: 800, fontSize: 13, cursor: 'pointer' },
   foot: { margin: '20px 0 0', fontSize: 11, lineHeight: 1.6, color: '#8a96a5' },
+  signOutWrap: { position: 'fixed', top: 10, right: 12, zIndex: 9999, display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 9, background: '#fff', border: '1px solid #e6ebf0', boxShadow: '0 2px 10px #142c4012' },
+  signedInAs: { fontSize: 11, color: '#758294', maxWidth: 170, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  signOut: { border: '1px solid #dbe2e8', borderRadius: 6, background: '#fff', padding: '6px 9px', color: '#455669', fontSize: 11, fontWeight: 700, cursor: 'pointer' },
 };
