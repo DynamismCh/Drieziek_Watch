@@ -35,21 +35,12 @@ export default function AuthGate({ children }: Props) {
       if (!url.startsWith('/api/incidents') && !url.startsWith('/api/messages')) {
         return originalFetch(input, init);
       }
-      // The Neon Auth SDK exposes JWT retrieval as getJWTToken() in some
-      // versions and as token() in others. Support both return shapes.
+      // Managed Neon Auth's documented browser API is token(), returning { data: { token } }.
+      // Do not use getJWTToken(): it is not part of the public Managed Auth client contract.
       let token: string | undefined;
-      const client: any = authClient;
       try {
-        if (typeof client.getJWTToken === 'function') {
-          const jwtResult = await client.getJWTToken();
-          token = typeof jwtResult === 'string'
-            ? jwtResult
-            : jwtResult?.data?.token ?? jwtResult?.token;
-        }
-        if (!token && typeof client.token === 'function') {
-          const tokenResult = await client.token();
-          token = tokenResult?.data?.token ?? tokenResult?.token;
-        }
+        const tokenResult: any = await authClient.token();
+        token = tokenResult?.data?.token;
       } catch {
         token = undefined;
       }
