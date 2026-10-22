@@ -36,14 +36,11 @@ export default function AuthGate({ children }: Props) {
       if (!url.startsWith('/api/incidents') && !url.startsWith('/api/messages')) {
         return originalFetch(input, init);
       }
-      // Managed Neon Auth's documented browser API is token(), returning { data: { token } }.
-      // Do not use getJWTToken(): it is not part of the public Managed Auth client contract.
-      let token: string | undefined;
+      let token: string | null = null;
       try {
-        const tokenResult: any = await authClient.token();
-        token = tokenResult?.data?.token;
+        token = await authClient.getJWTToken();
       } catch {
-        token = undefined;
+        token = null;
       }
       if (!token) {
         return new Response(JSON.stringify({ error: 'Your sign-in session could not provide an access token. Please sign out and sign in again.' }), {
